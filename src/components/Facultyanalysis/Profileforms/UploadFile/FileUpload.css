@@ -1,0 +1,49 @@
+.file-upload {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    
+  }
+  .fa-cloud-arrow-up{
+    cursor: pointer;
+  }
+  .upload-icon {
+    /* background-color: #1abc9c; */
+    /* color: white; */
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    font-size: 24px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .upload-icon:hover {
+    background-color: #16a085;
+  }
+  
+  .file-info {
+    margin-top: 10px;
+    text-align: center;
+  }
+  
+  .file-info p {
+    margin: 0;
+    padding: 0;
+  }
+  
+  .file-info  button{
+    background-color: #1abc9c;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+   
+    margin-top: 5px;
+  }
+  
+  .file-info button:hover {
+    background-color: #16a085;
+  }
+  
