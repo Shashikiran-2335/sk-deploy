@@ -18,7 +18,7 @@ const BorrowLogList = () => {
 
   const fetchLogs = async () => {
     try {
-      const response = await axios.get(' https://sk-deploy-backend.onrender.com/borrow');
+      const response = await axios.get('https://sk-deploy-backend.onrender.com/borrow');
       const sortedLogs = response.data.sort(
         (a, b) => new Date(b.date) - new Date(a.date)
       );
@@ -32,7 +32,7 @@ const BorrowLogList = () => {
     const confirmDelete = window.confirm("Are you sure this customer has paid and the log should be deleted?");
     if (!confirmDelete) return;
     try {
-      await axios.delete(` https://sk-deploy-backend.onrender.com/borrow/${id}`);
+      await axios.delete(`https://sk-deploy-backend.onrender.com/borrow/${id}`);
       fetchLogs(); // Refresh list after deletion
     } catch (err) {
       console.error("Error deleting log:", err);
