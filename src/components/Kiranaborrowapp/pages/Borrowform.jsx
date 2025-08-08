@@ -13,7 +13,7 @@ const BorrowEntryForm = () => {
     // Fetch unique customer names from backend
     const fetchCustomers = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/borrow/customers');
+        const response = await axios.get(' https://sk-deploy-backend.onrender.com/borrow/customers');
         console.log(response.data);
         setCustomerList(response.data || []);
       } catch (error) {
@@ -58,7 +58,7 @@ const BorrowEntryForm = () => {
 
     try {
       setLoading(true);
-      const response = await axios.post('http://localhost:5000/api/borrow', borrowData);
+      const response = await axios.post(' https://sk-deploy-backend.onrender.com/borrow', borrowData);
       alert('Borrow entry saved successfully!');
       console.log(response.data);
 

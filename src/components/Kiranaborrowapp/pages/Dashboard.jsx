@@ -33,7 +33,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/borrow");
+        const response = await axios.get("https://sk-deploy-backend.onrender.com/borrow");
         setBorrowData(response.data);
       } catch (err) {
         console.error("Failed to fetch borrow data", err);
