@@ -1,0 +1,36 @@
+/* Counter.css */
+.CounterContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 10px 0;
+}
+
+.CounterBtn {
+    padding: 15px 30px;
+    font-size: 20px;
+    color: white;
+    background-color: #007bff;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin: 0 5px;
+}
+
+.CounterBtn:hover {
+    background-color: #0056b3;
+}
+
+.CounterBtn:active {
+    background-color: #004085;
+}
+
+span {
+    display: block;
+    width: 100%;
+    text-align: center;
+    font-size: 40px;
+    margin-bottom: 20px;
+    font-family: Arial, sans-serif;
+}

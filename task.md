@@ -1,0 +1,22 @@
+- `[x]` Base Configuration & Packages
+  - `[x]` Install Tailwind CSS and PostCSS dependencies
+  - `[x]` Initialize and configure tailwind.config.js and postcss.config.js
+  - `[x]` Set up components.json and configure globals in index.css
+  - `[x]` Create cn utility helper in src/lib/utils.js
+- `[x]` Install Primitive Radix Packages
+  - `[x]` Install radix-ui components (slot, dialog, select, tabs, label, dropdown-menu)
+- `[x]` Rebuild Navbar & Layout
+  - `[x]` Migrate Navbar.jsx to Tailwind, remove Navbar.css
+- `[x]` Rebuild Home Page
+  - `[x]` Migrate HomePage.jsx to Tailwind, remove HomePage.css
+- `[x]` Rebuild Products Page
+  - `[x]` Migrate ProductsPage.jsx to Tailwind and shadcn-style cards/dialogs, remove ProductsPage.css
+- `[x]` Rebuild Borrow Form
+  - `[x]` Migrate Borrowform.jsx to Tailwind, remove BorrowEntryForm.css
+- `[x]` Rebuild Ledgers & Transaction Logs
+  - `[x]` Migrate BorrowLogList.jsx to Tailwind and shadcn-style tables/tabs, remove BorrowLogList.css
+- `[x]` Rebuild Dashboard
+  - `[x]` Migrate Dashboard.jsx to Tailwind, remove Dashboard.css
+- `[x]` Verification
+  - `[x]` Run build to verify clean compilation.
+  - `[x]` Verify UI flows and responsiveness.
