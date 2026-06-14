@@ -14,7 +14,9 @@ import {
   Check, 
   Undo,
   Calendar,
-  ChevronLeft
+  ChevronLeft,
+  SlidersHorizontal,
+  Filter
 } from 'lucide-react';
 
 const BorrowLogList = () => {
@@ -23,6 +25,7 @@ const BorrowLogList = () => {
   const [statusFilter, setStatusFilter] = useState("all"); // all, paid, unpaid
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
   
   // View states: 'ledger' (grouped by customer) or 'transactions' (individual entries)
   const [viewMode, setViewMode] = useState("ledger");
@@ -33,6 +36,16 @@ const BorrowLogList = () => {
   const [sortOrder, setSortOrder] = useState("desc"); // asc, desc
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // Helper to format YYYY-MM-DD to DD-MM-YYYY
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length === 3 && parts[0].length === 4) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return dateStr;
+  };
 
   useEffect(() => {
     fetchLogs();
@@ -277,15 +290,15 @@ const BorrowLogList = () => {
       csvContent += "Customer Name,Outstanding Balance,Total Settled,Last Active Date\n";
       activeList.forEach(ledger => {
         const cleanName = ledger.customerName.replace(/,/g, " ");
-        csvContent += `"${cleanName}",${ledger.totalOutstanding},${ledger.totalSettled},"${ledger.lastActivityDate}"\n`;
+        csvContent += `"${cleanName}",${ledger.totalOutstanding},${ledger.totalSettled},"${formatDate(ledger.lastActivityDate)}"\n`;
       });
     } else {
       csvContent += "Customer Name,Date,Total Cost,Status,Items\n";
       activeList.forEach(log => {
-        const itemsString = log.items.map(i => `${i.itemName} (Qty: ${i.quantity} @ ₹${i.rate})`).join(" | ");
+        const itemsString = (log.items || []).map(i => `${i.itemName} (Qty: ${i.quantity} @ ₹${i.rate})`).join(" | ");
         const statusText = log.status === 'paid' ? 'Paid' : 'Unpaid';
         const cleanCustomer = log.customerName.replace(/,/g, " ");
-        csvContent += `"${cleanCustomer}","${log.date}",${log.totalCost},"${statusText}","${itemsString.replace(/"/g, '""')}"\n`;
+        csvContent += `"${cleanCustomer}","${formatDate(log.date)}",${log.totalCost},"${statusText}","${itemsString.replace(/"/g, '""')}"\n`;
       });
     }
 
@@ -350,388 +363,691 @@ const BorrowLogList = () => {
       </div>
 
       {/* Toolbar & Filters */}
-      <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 text-left">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center">
-            <Search className="mr-1 h-3 w-3" /> Search Directory
-          </label>
-          <input
-            type="text"
-            placeholder="Search by customer name or product..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-            className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Credit Status</label>
-          <select 
-            value={statusFilter} 
-            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-            className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-          >
-            <option value="all">All Accounts</option>
-            <option value="unpaid">Outstanding (Unpaid)</option>
-            <option value="paid">Settled (Paid)</option>
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">From Date</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
-            className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">To Date</label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
-            className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-          />
-        </div>
-      </section>
-
-      {/* Table responsive container */}
-      <div className="w-full overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
-        <table className="w-full border-collapse text-left">
-          <thead>
-            {viewMode === "ledger" ? (
-              <tr className="border-b border-border bg-muted/40">
-                <th className="w-10 px-4 py-3.5"></th>
-                <th 
-                  onClick={() => handleSort("customerName")} 
-                  className="cursor-pointer px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary hover:text-primary transition-colors select-none"
-                >
-                  <span className="flex items-center">Customer Name <ArrowUpDown className="ml-1 h-3 w-3" /></span>
-                </th>
-                <th 
-                  onClick={() => handleSort("date")} 
-                  className="cursor-pointer px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary hover:text-primary transition-colors select-none"
-                >
-                  <span className="flex items-center">Last Active <ArrowUpDown className="ml-1 h-3 w-3" /></span>
-                </th>
-                <th 
-                  onClick={() => handleSort("totalCost")} 
-                  className="cursor-pointer px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary hover:text-primary transition-colors select-none"
-                >
-                  <span className="flex items-center">Outstanding Debt <ArrowUpDown className="ml-1 h-3 w-3" /></span>
-                </th>
-                <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary select-none">
-                  Total Recovered
-                </th>
-                <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary select-none">
-                  Status
-                </th>
-                <th className="w-36 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary select-none">
-                  Actions
-                </th>
-              </tr>
-            ) : (
-              <tr className="border-b border-border bg-muted/40">
-                <th className="w-10 px-4 py-3.5"></th>
-                <th 
-                  onClick={() => handleSort("customerName")} 
-                  className="cursor-pointer px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary hover:text-primary transition-colors select-none"
-                >
-                  <span className="flex items-center">Customer Name <ArrowUpDown className="ml-1 h-3 w-3" /></span>
-                </th>
-                <th 
-                  onClick={() => handleSort("date")} 
-                  className="cursor-pointer px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary hover:text-primary transition-colors select-none"
-                >
-                  <span className="flex items-center">Date <ArrowUpDown className="ml-1 h-3 w-3" /></span>
-                </th>
-                <th 
-                  onClick={() => handleSort("totalCost")} 
-                  className="cursor-pointer px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary hover:text-primary transition-colors select-none"
-                >
-                  <span className="flex items-center">Total Cost <ArrowUpDown className="ml-1 h-3 w-3" /></span>
-                </th>
-                <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary select-none">
-                  Status
-                </th>
-                <th className="w-36 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary select-none">
-                  Actions
-                </th>
-              </tr>
-            )}
-          </thead>
+      <div className="mb-8 flex flex-col gap-4">
+        {/* Row 1: Search Directory & Mobile Filters Toggle */}
+        <div className="flex items-end gap-3 w-full">
+          <div className="flex flex-col gap-1.5 flex-1 text-left">
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center">
+              <Search className="mr-1 h-3.5 w-3.5 text-muted-foreground/80" /> Search Directory
+            </label>
+            <div className="relative rounded-md shadow-sm">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <Search className="h-4 w-4 text-muted-foreground/75" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search by customer name or product..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+                className="block h-10 w-full rounded-md border border-input bg-background py-2 pl-9 pr-3 text-sm text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 hover:border-muted-foreground/30"
+              />
+            </div>
+          </div>
           
-          <tbody className="divide-y divide-border">
-            {currentRows.length === 0 ? (
-              <tr>
-                <td colSpan={viewMode === 'ledger' ? 7 : 6} className="py-12 text-center text-sm text-muted-foreground">
-                  No credit profiles found.
-                </td>
-              </tr>
-            ) : (
-              currentRows.map((row) => {
-                if (viewMode === "ledger") {
-                  const isExpanded = expandedRows[row.customerName];
-                  const hasDebt = row.totalOutstanding > 0;
+          {/* Filters Toggle Button (Mobile Only) */}
+          <button
+            type="button"
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex md:hidden h-10 items-center justify-center space-x-1.5 rounded-md border px-4 text-sm font-semibold transition-all ${
+              showFilters 
+                ? 'bg-primary border-primary text-white shadow-sm' 
+                : 'bg-background border-border text-foreground hover:bg-muted'
+            }`}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            <span>Filters</span>
+          </button>
+        </div>
+
+        {/* Filters Panel (Collapsible on Mobile, always visible on Desktop) */}
+        <div className={`${
+          showFilters ? 'grid' : 'hidden'
+        } md:grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 text-left border-t border-dashed border-border/60 pt-4 md:border-0 md:pt-0`}>
+          
+          {/* Credit Status */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center">
+              <Filter className="mr-1 h-3.5 w-3.5 text-muted-foreground/80" /> Credit Status
+            </label>
+            <select 
+              value={statusFilter} 
+              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 hover:border-muted-foreground/30 cursor-pointer"
+            >
+              <option value="all">All Accounts</option>
+              <option value="unpaid">Outstanding (Unpaid)</option>
+              <option value="paid">Settled (Paid)</option>
+            </select>
+          </div>
+
+          {/* From Date & To Date - Grouped side-by-side to look incredibly compact */}
+          <div className="sm:col-span-2 grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center">
+                <Calendar className="mr-1 h-3.5 w-3.5 text-muted-foreground/80" /> From Date
+              </label>
+              <div className="relative rounded-md shadow-sm">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <Calendar className="h-4 w-4 text-muted-foreground/75" />
+                </div>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
+                  className="block h-10 w-full rounded-md border border-input bg-background py-2 pl-9 pr-3 text-sm text-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 hover:border-muted-foreground/30"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center">
+                <Calendar className="mr-1 h-3.5 w-3.5 text-muted-foreground/80" /> To Date
+              </label>
+              <div className="relative rounded-md shadow-sm">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <Calendar className="h-4 w-4 text-muted-foreground/75" />
+                </div>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
+                  className="block h-10 w-full rounded-md border border-input bg-background py-2 pl-9 pr-3 text-sm text-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 hover:border-muted-foreground/30"
+                />
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Table & Cards responsive container */}
+      <div className="w-full">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+          <table className="w-full border-collapse text-left">
+            <thead>
+              {viewMode === "ledger" ? (
+                <tr className="border-b border-border bg-muted/40">
+                  <th className="w-10 px-4 py-3.5"></th>
+                  <th 
+                    onClick={() => handleSort("customerName")} 
+                    className="cursor-pointer px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary hover:text-primary transition-colors select-none"
+                  >
+                    <span className="flex items-center">Customer Name <ArrowUpDown className="ml-1 h-3 w-3" /></span>
+                  </th>
+                  <th 
+                    onClick={() => handleSort("date")} 
+                    className="cursor-pointer px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary hover:text-primary transition-colors select-none"
+                  >
+                    <span className="flex items-center">Last Active <ArrowUpDown className="ml-1 h-3 w-3" /></span>
+                  </th>
+                  <th 
+                    onClick={() => handleSort("totalCost")} 
+                    className="cursor-pointer px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary hover:text-primary transition-colors select-none"
+                  >
+                    <span className="flex items-center">Outstanding Debt <ArrowUpDown className="ml-1 h-3 w-3" /></span>
+                  </th>
+                  <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary select-none">
+                    Total Recovered
+                  </th>
+                  <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary select-none">
+                    Status
+                  </th>
+                  <th className="w-36 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary select-none">
+                    Actions
+                  </th>
+                </tr>
+              ) : (
+                <tr className="border-b border-border bg-muted/40">
+                  <th className="w-10 px-4 py-3.5"></th>
+                  <th 
+                    onClick={() => handleSort("customerName")} 
+                    className="cursor-pointer px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary hover:text-primary transition-colors select-none"
+                  >
+                    <span className="flex items-center">Customer Name <ArrowUpDown className="ml-1 h-3 w-3" /></span>
+                  </th>
+                  <th 
+                    onClick={() => handleSort("date")} 
+                    className="cursor-pointer px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary hover:text-primary transition-colors select-none"
+                  >
+                    <span className="flex items-center">Date <ArrowUpDown className="ml-1 h-3 w-3" /></span>
+                  </th>
+                  <th 
+                    onClick={() => handleSort("totalCost")} 
+                    className="cursor-pointer px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary hover:text-primary transition-colors select-none"
+                  >
+                    <span className="flex items-center">Total Cost <ArrowUpDown className="ml-1 h-3 w-3" /></span>
+                  </th>
+                  <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary select-none">
+                    Status
+                  </th>
+                  <th className="w-36 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-secondary select-none">
+                    Actions
+                  </th>
+                </tr>
+              )}
+            </thead>
+            
+            <tbody className="divide-y divide-border">
+              {currentRows.length === 0 ? (
+                <tr>
+                  <td colSpan={viewMode === 'ledger' ? 7 : 6} className="py-12 text-center text-sm text-muted-foreground">
+                    No credit profiles found.
+                  </td>
+                </tr>
+              ) : (
+                currentRows.map((row) => {
+                  if (viewMode === "ledger") {
+                    const isExpanded = expandedRows[row.customerName];
+                    const hasDebt = row.totalOutstanding > 0;
+                    
+                    return (
+                      <React.Fragment key={row.customerName}>
+                        <tr className={`transition-colors hover:bg-muted/30 ${!hasDebt ? 'opacity-70 bg-emerald-50/20' : ''}`}>
+                          <td className="px-4 py-4 text-center">
+                            <button 
+                              className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-secondary" 
+                              onClick={() => toggleRow(row.customerName)}
+                              title="Toggle account history"
+                            >
+                              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            </button>
+                          </td>
+                          <td className="px-4 py-4 font-bold text-secondary">{row.customerName}</td>
+                          <td className="px-4 py-4 text-muted-foreground">{formatDate(row.lastActivityDate)}</td>
+                          <td className={`px-4 py-4 font-bold ${hasDebt ? 'text-red-600' : 'text-muted-foreground line-through'}`}>
+                            ₹{row.totalOutstanding.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-4 font-bold text-emerald-600">₹{row.totalSettled.toFixed(2)}</td>
+                          <td className="px-4 py-4">
+                            <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${
+                              !hasDebt 
+                                ? 'bg-emerald-100 text-emerald-800' 
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {!hasDebt ? 'Settled' : 'Outstanding'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <button
+                              className="inline-flex items-center space-x-1 rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
+                              onClick={() => handleSettleAll(row.logs)}
+                              disabled={!hasDebt}
+                              title="Clear all outstanding balances"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              <span>Clear All</span>
+                            </button>
+                          </td>
+                        </tr>
+
+                        {/* Customer Detailed Statement Dropdown */}
+                        {isExpanded && (
+                          <tr>
+                            <td></td>
+                            <td colSpan="6" className="bg-muted/10 px-6 py-4">
+                              <div className="rounded-lg border border-border bg-card p-5 shadow-sm text-left">
+                                <div className="mb-4 flex flex-col justify-between border-b border-border pb-3 sm:flex-row sm:items-center">
+                                  <h4 className="font-bold text-secondary text-base">Account Statement — {row.customerName}</h4>
+                                  <span className="text-xs font-medium text-muted-foreground mt-1 sm:mt-0">
+                                    Total Transactions: {row.logs.length} ({row.logs.filter(l=>l.status!=='paid').length} pending)
+                                  </span>
+                                </div>
+                                
+                                <div className="space-y-4">
+                                  {row.logs.map((log) => {
+                                    const logPaid = log.status === 'paid';
+                                    return (
+                                      <div 
+                                        key={log._id}
+                                        className={`relative rounded-md border p-4 transition-all ${
+                                          logPaid 
+                                            ? 'border-l-4 border-l-emerald-600 border-border bg-emerald-50/10' 
+                                            : 'border-l-4 border-l-red-600 border-border bg-red-50/10'
+                                        }`}
+                                      >
+                                        <div className="mb-3 flex items-center justify-between flex-wrap gap-2">
+                                          <div className="flex items-center space-x-3 text-sm font-semibold text-secondary">
+                                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                                            <span>{formatDate(log.date)}{log.time ? ` @ ${log.time}` : ''}</span>
+                                          </div>
+                                          <div>
+                                            <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                                              logPaid 
+                                                ? 'bg-emerald-100 text-emerald-800' 
+                                                : 'bg-red-100 text-red-800'
+                                            }`}>
+                                              {logPaid ? 'Settled' : 'Pending'}
+                                            </span>
+                                          </div>
+                                        </div>
+                                        
+                                        <table className="w-full text-left text-xs mb-3">
+                                          <thead>
+                                            <tr className="border-b border-border bg-muted/40">
+                                              <th className="px-3 py-1.5 font-bold text-muted-foreground uppercase">Grocery Item</th>
+                                              <th className="px-3 py-1.5 font-bold text-muted-foreground uppercase">Quantity</th>
+                                              <th className="px-3 py-1.5 font-bold text-muted-foreground uppercase">Unit Rate</th>
+                                              <th className="px-3 py-1.5 font-bold text-muted-foreground uppercase text-right">Total</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {(log.items || []).map((item, idx) => (
+                                              <tr key={idx} className="border-b border-border">
+                                                <td className="px-3 py-1.5 text-secondary">{item.itemName}</td>
+                                                <td className="px-3 py-1.5 text-muted-foreground">{item.quantity}</td>
+                                                <td className="px-3 py-1.5 text-muted-foreground">₹{(item.rate || 0).toFixed(2)}</td>
+                                                <td className="px-3 py-1.5 font-semibold text-secondary text-right">
+                                                  ₹{((item.quantity || 0) * (item.rate || 0)).toFixed(2)}
+                                                </td>
+                                              </tr>
+                                            ))}
+                                            <tr className="bg-muted/10 font-bold">
+                                              <td colSpan="3" className="px-3 py-2 text-muted-foreground uppercase">Total For Purchase</td>
+                                              <td className="px-3 py-2 text-primary text-right text-sm">
+                                                ₹{(log.totalCost || 0).toFixed(2)}
+                                              </td>
+                                            </tr>
+                                          </tbody>
+                                        </table>
+
+                                        <div className="flex items-center justify-between border-t border-dashed border-border pt-3 flex-wrap gap-2">
+                                          <div>
+                                            {log.pickedUpBy && (
+                                              <span className="inline-flex items-center space-x-1 rounded border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground">
+                                                <span>👤 Picked up by:</span> 
+                                                <strong className="text-secondary">{log.pickedUpBy}</strong>
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center space-x-2">
+                                            <button
+                                              className={`inline-flex items-center space-x-1 rounded px-2.5 py-1 text-xs font-semibold border ${
+                                                logPaid 
+                                                  ? 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100' 
+                                                  : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                                              }`}
+                                              onClick={() => handleToggleStatus(log._id, log.status)}
+                                              title={logPaid ? "Revert payment" : "Clear this log"}
+                                            >
+                                              {logPaid ? <Undo className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
+                                              <span>{logPaid ? 'Unpay' : 'Mark Paid'}</span>
+                                            </button>
+                                            <button
+                                              className="inline-flex items-center space-x-1 rounded border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-100"
+                                              onClick={() => handleDelete(log._id)}
+                                              title="Delete transaction record"
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5" />
+                                              <span>Remove</span>
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  } 
+                  
+                  // --- RAW TRANSACTIONS MODE ---
+                  const isExpanded = expandedRows[row._id];
+                  const isPaid = row.status === 'paid';
                   
                   return (
-                    <React.Fragment key={row.customerName}>
-                      <tr className={`transition-colors hover:bg-muted/30 ${!hasDebt ? 'opacity-70 bg-emerald-50/20' : ''}`}>
+                    <React.Fragment key={row._id}>
+                      <tr className={`transition-colors hover:bg-muted/30 ${isPaid ? 'opacity-70 bg-emerald-50/20' : ''}`}>
                         <td className="px-4 py-4 text-center">
                           <button 
                             className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-secondary" 
-                            onClick={() => toggleRow(row.customerName)}
-                            title="Toggle account history"
+                            onClick={() => toggleRow(row._id)}
+                            title="Toggle item details"
                           >
                             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                           </button>
                         </td>
                         <td className="px-4 py-4 font-bold text-secondary">{row.customerName}</td>
-                        <td className="px-4 py-4 text-muted-foreground">{row.lastActivityDate}</td>
-                        <td className={`px-4 py-4 font-bold ${hasDebt ? 'text-red-600' : 'text-muted-foreground line-through'}`}>
-                          ₹{row.totalOutstanding.toFixed(2)}
-                        </td>
-                        <td className="px-4 py-4 font-bold text-emerald-600">₹{row.totalSettled.toFixed(2)}</td>
+                        <td className="px-4 py-4 text-muted-foreground">{formatDate(row.date)}{row.time ? ` @ ${row.time}` : ''}</td>
+                        <td className="px-4 py-4 font-bold text-secondary">₹{(row.totalCost || 0).toFixed(2)}</td>
                         <td className="px-4 py-4">
                           <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${
-                            !hasDebt 
+                            isPaid 
                               ? 'bg-emerald-100 text-emerald-800' 
                               : 'bg-red-100 text-red-800'
                           }`}>
-                            {!hasDebt ? 'Settled' : 'Outstanding'}
+                            {isPaid ? 'Settled' : 'Pending'}
                           </span>
                         </td>
                         <td className="px-4 py-4">
-                          <button
-                            className="inline-flex items-center space-x-1 rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
-                            onClick={() => handleSettleAll(row.logs)}
-                            disabled={!hasDebt}
-                            title="Clear all outstanding balances"
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                            <span>Clear All</span>
-                          </button>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              className={`inline-flex items-center space-x-1 rounded px-2.5 py-1.5 text-xs font-semibold border ${
+                                isPaid 
+                                  ? 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100' 
+                                  : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                              }`}
+                              onClick={() => handleToggleStatus(row._id, row.status)}
+                              title={isPaid ? "Mark as unpaid" : "Mark as paid"}
+                            >
+                              {isPaid ? <Undo className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
+                              <span>{isPaid ? 'Unpay' : 'Pay'}</span>
+                            </button>
+                            <button
+                              className="inline-flex items-center rounded border border-border p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors"
+                              onClick={() => handleDelete(row._id)}
+                              title="Delete entry permanently"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
-
-                      {/* Customer Detailed Statement Dropdown */}
+                      
+                      {/* Individual Items Expanded Sub-table */}
                       {isExpanded && (
                         <tr>
                           <td></td>
-                          <td colSpan="6" className="bg-muted/10 px-6 py-4">
+                          <td colSpan="5" className="bg-muted/10 px-6 py-4">
                             <div className="rounded-lg border border-border bg-card p-5 shadow-sm text-left">
-                              <div className="mb-4 flex flex-col justify-between border-b border-border pb-3 sm:flex-row sm:items-center">
-                                <h4 className="font-bold text-secondary text-base">Account Statement — {row.customerName}</h4>
-                                <span className="text-xs font-medium text-muted-foreground mt-1 sm:mt-0">
-                                  Total Transactions: {row.logs.length} ({row.logs.filter(l=>l.status!=='paid').length} pending)
-                                </span>
+                              <div className="mb-3 flex items-center justify-between border-b border-border pb-3 flex-wrap gap-2">
+                                <h4 className="font-bold text-secondary text-base">Purchase breakdown</h4>
+                                {row.pickedUpBy && (
+                                  <span className="inline-flex items-center space-x-1 rounded border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground">
+                                    <span>👤 Picked up by:</span> 
+                                    <strong className="text-secondary">{row.pickedUpBy}</strong>
+                                  </span>
+                                )}
                               </div>
                               
-                              <div className="space-y-4">
-                                {row.logs.map((log) => {
-                                  const logPaid = log.status === 'paid';
-                                  return (
-                                    <div 
-                                      key={log._id}
-                                      className={`relative rounded-md border p-4 transition-all ${
-                                        logPaid 
-                                          ? 'border-l-4 border-l-emerald-600 border-border bg-emerald-50/10' 
-                                          : 'border-l-4 border-l-red-600 border-border bg-red-50/10'
-                                      }`}
-                                    >
-                                      <div className="mb-3 flex items-center justify-between flex-wrap gap-2">
-                                        <div className="flex items-center space-x-3 text-sm font-semibold text-secondary">
-                                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                                          <span>{log.date}{log.time ? ` @ ${log.time}` : ''}</span>
-                                        </div>
-                                        <div>
-                                          <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                                            logPaid 
-                                              ? 'bg-emerald-100 text-emerald-800' 
-                                              : 'bg-red-100 text-red-800'
-                                          }`}>
-                                            {logPaid ? 'Settled' : 'Pending'}
-                                          </span>
-                                        </div>
-                                      </div>
-                                      
-                                      <table className="w-full text-left text-xs mb-3">
-                                        <thead>
-                                          <tr className="border-b border-border bg-muted/40">
-                                            <th className="px-3 py-1.5 font-bold text-muted-foreground uppercase">Grocery Item</th>
-                                            <th className="px-3 py-1.5 font-bold text-muted-foreground uppercase">Quantity</th>
-                                            <th className="px-3 py-1.5 font-bold text-muted-foreground uppercase">Unit Rate</th>
-                                            <th className="px-3 py-1.5 font-bold text-muted-foreground uppercase text-right">Total</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          {log.items.map((item, idx) => (
-                                            <tr key={idx} className="border-b border-border">
-                                              <td className="px-3 py-1.5 text-secondary">{item.itemName}</td>
-                                              <td className="px-3 py-1.5 text-muted-foreground">{item.quantity}</td>
-                                              <td className="px-3 py-1.5 text-muted-foreground">₹{(item.rate || 0).toFixed(2)}</td>
-                                              <td className="px-3 py-1.5 font-semibold text-secondary text-right">
-                                                ₹{((item.quantity || 0) * (item.rate || 0)).toFixed(2)}
-                                              </td>
-                                            </tr>
-                                          ))}
-                                          <tr className="bg-muted/10 font-bold">
-                                            <td colSpan="3" className="px-3 py-2 text-muted-foreground uppercase">Total For Purchase</td>
-                                            <td className="px-3 py-2 text-primary text-right text-sm">
-                                              ₹{(log.totalCost || 0).toFixed(2)}
-                                            </td>
-                                          </tr>
-                                        </tbody>
-                                      </table>
-
-                                      <div className="flex items-center justify-between border-t border-dashed border-border pt-3 flex-wrap gap-2">
-                                        <div>
-                                          {log.pickedUpBy && (
-                                            <span className="inline-flex items-center space-x-1 rounded border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground">
-                                              <span>👤 Picked up by:</span> 
-                                              <strong className="text-secondary">{log.pickedUpBy}</strong>
-                                            </span>
-                                          )}
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                          <button
-                                            className={`inline-flex items-center space-x-1 rounded px-2.5 py-1 text-xs font-semibold border ${
-                                              logPaid 
-                                                ? 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100' 
-                                                : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
-                                            }`}
-                                            onClick={() => handleToggleStatus(log._id, log.status)}
-                                            title={logPaid ? "Revert payment" : "Clear this log"}
-                                          >
-                                            {logPaid ? <Undo className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
-                                            <span>{logPaid ? 'Unpay' : 'Mark Paid'}</span>
-                                          </button>
-                                          <button
-                                            className="inline-flex items-center space-x-1 rounded border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-100"
-                                            onClick={() => handleDelete(log._id)}
-                                            title="Delete transaction record"
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                            <span>Remove</span>
-                                          </button>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
+                              <table className="w-full text-left text-xs">
+                                <thead>
+                                  <tr className="border-b border-border bg-muted/40">
+                                    <th className="px-3 py-2 font-bold text-muted-foreground uppercase">Item Description</th>
+                                    <th className="px-3 py-2 font-bold text-muted-foreground uppercase">Quantity</th>
+                                    <th className="px-3 py-2 font-bold text-muted-foreground uppercase">Rate</th>
+                                    <th className="px-3 py-2 font-bold text-muted-foreground uppercase text-right">Subtotal</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {row.items && row.items.map((item, idx) => (
+                                    <tr key={idx} className="border-b border-border">
+                                      <td className="px-3 py-2 text-secondary">{item.itemName}</td>
+                                      <td className="px-3 py-2 text-muted-foreground">{item.quantity}</td>
+                                      <td className="px-3 py-2 text-muted-foreground">₹{(item.rate || 0).toFixed(2)}</td>
+                                      <td className="px-3 py-2 font-semibold text-secondary text-right">
+                                        ₹{((item.quantity || 0) * (item.rate || 0)).toFixed(2)}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
                             </div>
                           </td>
                         </tr>
                       )}
                     </React.Fragment>
                   );
-                } 
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile Card List View */}
+        <div className="block md:hidden space-y-4">
+          {currentRows.length === 0 ? (
+            <div className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+              No credit profiles found.
+            </div>
+          ) : (
+            currentRows.map((row) => {
+              if (viewMode === "ledger") {
+                const isExpanded = !!expandedRows[row.customerName];
+                const hasDebt = row.totalOutstanding > 0;
                 
-                // --- RAW TRANSACTIONS MODE ---
-                const isExpanded = expandedRows[row._id];
+                return (
+                  <div 
+                    key={row.customerName}
+                    className={`rounded-lg border border-border bg-card p-4 shadow-sm transition-all ${
+                      !hasDebt ? 'opacity-90 border-l-4 border-l-emerald-500' : 'border-l-4 border-l-red-500'
+                    }`}
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between pb-3 border-b border-border">
+                      <h3 className="font-bold text-secondary text-base">{row.customerName}</h3>
+                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${
+                        !hasDebt 
+                          ? 'bg-emerald-100 text-emerald-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {!hasDebt ? 'Settled' : 'Outstanding'}
+                      </span>
+                    </div>
+
+                    {/* Ledger Info */}
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="block text-muted-foreground font-semibold uppercase tracking-wider mb-0.5">Last Active</span>
+                        <span className="font-medium text-secondary">{formatDate(row.lastActivityDate)}</span>
+                      </div>
+                      <div>
+                        <span className="block text-muted-foreground font-semibold uppercase tracking-wider mb-0.5">Outstanding Debt</span>
+                        <span className={`font-bold ${hasDebt ? 'text-red-600 text-sm' : 'text-muted-foreground line-through'}`}>
+                          ₹{row.totalOutstanding.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="block text-muted-foreground font-semibold uppercase tracking-wider mb-0.5">Total Recovered</span>
+                        <span className="font-bold text-emerald-600">₹{row.totalSettled.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    {/* Card Actions */}
+                    <div className="mt-4 flex items-center gap-2 border-t border-border pt-3">
+                      <button
+                        className="flex-1 inline-flex items-center justify-center space-x-1.5 rounded bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-emerald-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                        onClick={() => handleSettleAll(row.logs)}
+                        disabled={!hasDebt}
+                        title="Clear all outstanding balances"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        <span>Clear All</span>
+                      </button>
+
+                      <button
+                        className="inline-flex items-center justify-center rounded border border-border bg-background px-3 py-2 text-xs font-semibold text-secondary hover:bg-muted"
+                        onClick={() => toggleRow(row.customerName)}
+                        title="Toggle statement history"
+                      >
+                        {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                        <span className="ml-1">{isExpanded ? 'Hide Details' : 'Details'}</span>
+                      </button>
+                    </div>
+
+                    {/* Customer Detailed Statement dropdown in Mobile */}
+                    {isExpanded && (
+                      <div className="mt-4 border-t border-dashed border-border pt-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-bold text-secondary text-xs">Statement</h4>
+                          <span className="text-[10px] text-muted-foreground">
+                            {row.logs.length} transactions ({row.logs.filter(l=>l.status!=='paid').length} pending)
+                          </span>
+                        </div>
+
+                        <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+                          {row.logs.map((log) => {
+                            const logPaid = log.status === 'paid';
+                            return (
+                              <div 
+                                key={log._id}
+                                className={`rounded border p-3 transition-all ${
+                                  logPaid 
+                                    ? 'border-l-2 border-l-emerald-600 border-border bg-emerald-50/10' 
+                                    : 'border-l-2 border-l-red-600 border-border bg-red-50/10'
+                                }`}
+                              >
+                                <div className="mb-2 flex items-center justify-between text-[11px] font-semibold text-secondary">
+                                  <div className="flex items-center space-x-1.5">
+                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <span>{formatDate(log.date)}{log.time ? ` @ ${log.time}` : ''}</span>
+                                  </div>
+                                  <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                                    logPaid 
+                                      ? 'bg-emerald-100 text-emerald-800' 
+                                      : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {logPaid ? 'Settled' : 'Pending'}
+                                  </span>
+                                </div>
+
+                                <div className="my-2 border-y border-border py-1.5 bg-muted/10 px-2 rounded text-[11px] space-y-1">
+                                  {(log.items || []).map((item, idx) => (
+                                    <div key={idx} className="flex justify-between items-center text-secondary">
+                                      <span>{item.itemName} <span className="text-muted-foreground">x{item.quantity}</span></span>
+                                      <span className="font-semibold">₹{((item.quantity || 0) * (item.rate || 0)).toFixed(2)}</span>
+                                    </div>
+                                  ))}
+                                  <div className="flex justify-between items-center pt-1 border-t border-dashed border-border font-bold text-secondary">
+                                    <span className="uppercase text-[9px] text-muted-foreground">Total</span>
+                                    <span className="text-primary text-xs">₹{(log.totalCost || 0).toFixed(2)}</span>
+                                  </div>
+                                </div>
+
+                                {log.pickedUpBy && (
+                                  <div className="mb-2 text-[10px] text-muted-foreground">
+                                    👤 Picked up by: <strong className="text-secondary">{log.pickedUpBy}</strong>
+                                  </div>
+                                )}
+
+                                <div className="flex items-center justify-end space-x-1.5">
+                                  <button
+                                    className={`inline-flex items-center space-x-1 rounded px-2 py-1 text-[10px] font-semibold border ${
+                                      logPaid 
+                                        ? 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100' 
+                                        : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                                    }`}
+                                    onClick={() => handleToggleStatus(log._id, log.status)}
+                                  >
+                                    {logPaid ? <Undo className="h-3 w-3" /> : <Check className="h-3 w-3" />}
+                                    <span>{logPaid ? 'Unpay' : 'Pay'}</span>
+                                  </button>
+                                  <button
+                                    className="inline-flex items-center space-x-1 rounded border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-700 hover:bg-red-100"
+                                    onClick={() => handleDelete(log._id)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                    <span>Remove</span>
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              } else {
+                // Raw transactions mode in Mobile
+                const isExpanded = !!expandedRows[row._id];
                 const isPaid = row.status === 'paid';
                 
                 return (
-                  <React.Fragment key={row._id}>
-                    <tr className={`transition-colors hover:bg-muted/30 ${isPaid ? 'opacity-70 bg-emerald-50/20' : ''}`}>
-                      <td className="px-4 py-4 text-center">
-                        <button 
-                          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-secondary" 
-                          onClick={() => toggleRow(row._id)}
-                          title="Toggle item details"
-                        >
-                          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        </button>
-                      </td>
-                      <td className="px-4 py-4 font-bold text-secondary">{row.customerName}</td>
-                      <td className="px-4 py-4 text-muted-foreground">{row.date}{row.time ? ` @ ${row.time}` : ''}</td>
-                      <td className="px-4 py-4 font-bold text-secondary">₹{(row.totalCost || 0).toFixed(2)}</td>
-                      <td className="px-4 py-4">
-                        <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${
-                          isPaid 
-                            ? 'bg-emerald-100 text-emerald-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {isPaid ? 'Settled' : 'Pending'}
+                  <div 
+                    key={row._id}
+                    className={`rounded-lg border border-border bg-card p-4 shadow-sm transition-all ${
+                      isPaid ? 'opacity-90 border-l-4 border-l-emerald-500' : 'border-l-4 border-l-red-500'
+                    }`}
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between pb-3 border-b border-border">
+                      <h3 className="font-bold text-secondary text-base">{row.customerName}</h3>
+                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${
+                        isPaid 
+                          ? 'bg-emerald-100 text-emerald-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {isPaid ? 'Settled' : 'Pending'}
+                      </span>
+                    </div>
+
+                    {/* Transaction Info */}
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="block text-muted-foreground font-semibold uppercase tracking-wider mb-0.5">Date</span>
+                        <span className="font-medium text-secondary">{formatDate(row.date)}{row.time ? ` @ ${row.time}` : ''}</span>
+                      </div>
+                      <div>
+                        <span className="block text-muted-foreground font-semibold uppercase tracking-wider mb-0.5">Total Cost</span>
+                        <span className="font-bold text-secondary text-sm">
+                          ₹{(row.totalCost || 0).toFixed(2)}
                         </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center space-x-2">
-                          <button
-                            className={`inline-flex items-center space-x-1 rounded px-2.5 py-1.5 text-xs font-semibold border ${
-                              isPaid 
-                                ? 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100' 
-                                : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
-                            }`}
-                            onClick={() => handleToggleStatus(row._id, row.status)}
-                            title={isPaid ? "Mark as unpaid" : "Mark as paid"}
-                          >
-                            {isPaid ? <Undo className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
-                            <span>{isPaid ? 'Unpay' : 'Pay'}</span>
-                          </button>
-                          <button
-                            className="inline-flex items-center rounded border border-border p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors"
-                            onClick={() => handleDelete(row._id)}
-                            title="Delete entry permanently"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    
-                    {/* Individual Items Expanded Sub-table */}
+                      </div>
+                    </div>
+
+                    {/* Card Actions */}
+                    <div className="mt-4 flex items-center gap-2 border-t border-border pt-3">
+                      <button
+                        className={`flex-1 inline-flex items-center justify-center space-x-1.5 rounded px-3 py-2 text-xs font-semibold border ${
+                          isPaid 
+                            ? 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100' 
+                            : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                        }`}
+                        onClick={() => handleToggleStatus(row._id, row.status)}
+                      >
+                        {isPaid ? <Undo className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
+                        <span>{isPaid ? 'Unpay' : 'Pay'}</span>
+                      </button>
+
+                      <button
+                        className="inline-flex items-center justify-center rounded border border-border bg-background px-3 py-2 text-xs font-semibold text-secondary hover:bg-muted"
+                        onClick={() => toggleRow(row._id)}
+                        title="Toggle items breakdown"
+                      >
+                        {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                        <span className="ml-1">{isExpanded ? 'Hide Items' : 'View Items'}</span>
+                      </button>
+
+                      <button
+                        className="inline-flex items-center justify-center rounded border border-red-200 bg-red-50 p-2 text-red-700 hover:bg-red-100"
+                        onClick={() => handleDelete(row._id)}
+                        title="Delete entry permanently"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Items Breakdown Dropdown in Mobile */}
                     {isExpanded && (
-                      <tr>
-                        <td></td>
-                        <td colSpan="5" className="bg-muted/10 px-6 py-4">
-                          <div className="rounded-lg border border-border bg-card p-5 shadow-sm text-left">
-                            <div className="mb-3 flex items-center justify-between border-b border-border pb-3 flex-wrap gap-2">
-                              <h4 className="font-bold text-secondary text-base">Purchase breakdown</h4>
-                              {row.pickedUpBy && (
-                                <span className="inline-flex items-center space-x-1 rounded border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground">
-                                  <span>👤 Picked up by:</span> 
-                                  <strong className="text-secondary">{row.pickedUpBy}</strong>
-                                </span>
-                              )}
+                      <div className="mt-4 border-t border-dashed border-border pt-4 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <h4 className="font-bold text-secondary">Purchase breakdown</h4>
+                          {row.pickedUpBy && (
+                            <span className="text-[10px] text-muted-foreground">👤 Picked up by: <strong className="text-secondary">{row.pickedUpBy}</strong></span>
+                          )}
+                        </div>
+
+                        <div className="space-y-1 my-2 border border-border bg-muted/10 px-3 py-2 rounded text-[11px]">
+                          {row.items && row.items.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-secondary">
+                              <span>{item.itemName} <span className="text-muted-foreground">x{item.quantity}</span></span>
+                              <span className="font-semibold">₹{((item.quantity || 0) * (item.rate || 0)).toFixed(2)}</span>
                             </div>
-                            
-                            <table className="w-full text-left text-xs">
-                              <thead>
-                                <tr className="border-b border-border bg-muted/40">
-                                  <th className="px-3 py-2 font-bold text-muted-foreground uppercase">Item Description</th>
-                                  <th className="px-3 py-2 font-bold text-muted-foreground uppercase">Quantity</th>
-                                  <th className="px-3 py-2 font-bold text-muted-foreground uppercase">Rate</th>
-                                  <th className="px-3 py-2 font-bold text-muted-foreground uppercase text-right">Subtotal</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {row.items && row.items.map((item, idx) => (
-                                  <tr key={idx} className="border-b border-border">
-                                    <td className="px-3 py-2 text-secondary">{item.itemName}</td>
-                                    <td className="px-3 py-2 text-muted-foreground">{item.quantity}</td>
-                                    <td className="px-3 py-2 text-muted-foreground">₹{(item.rate || 0).toFixed(2)}</td>
-                                    <td className="px-3 py-2 font-semibold text-secondary text-right">
-                                      ₹{((item.quantity || 0) * (item.rate || 0)).toFixed(2)}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </td>
-                      </tr>
+                          ))}
+                        </div>
+                      </div>
                     )}
-                  </React.Fragment>
+                  </div>
                 );
-              })
-            )}
-          </tbody>
-        </table>
+              }
+            })
+          )}
+        </div>
       </div>
 
       {/* Pagination / Table Footer */}

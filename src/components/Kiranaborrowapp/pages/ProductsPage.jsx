@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { API_BASE_URL } from '../config';
-import { Package, Trash2, Edit2, Plus, X, Save, Search } from 'lucide-react';
+import { Package, Trash2, Edit2, Plus, X, Save, Search, Tag } from 'lucide-react';
 
 const PRODUCT_API_URL = API_BASE_URL.replace('/borrow', '/products');
 
@@ -183,35 +183,45 @@ const ProductsPage = () => {
               </div>
 
               <div className="flex flex-col gap-1.5 text-left">
-                <label htmlFor="prod-name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Product Name
+                <label htmlFor="prod-name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center">
+                  <Tag className="mr-1 h-3.5 w-3.5 text-muted-foreground/80" /> Product Name
                 </label>
-                <input
-                  id="prod-name"
-                  type="text"
-                  placeholder="e.g. Rice (1 kg)"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  required
-                />
+                <div className="relative rounded-md shadow-sm">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                    <Tag className="h-4 w-4 text-muted-foreground/75" />
+                  </div>
+                  <input
+                    id="prod-name"
+                    type="text"
+                    placeholder="e.g. Rice (1 kg)"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="block w-full rounded-md border border-input bg-background py-2 pl-10 pr-3 text-sm text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 hover:border-muted-foreground/30"
+                    required
+                  />
+                </div>
               </div>
 
               <div className="flex flex-col gap-1.5 text-left">
-                <label htmlFor="prod-rate" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Default Rate (₹)
+                <label htmlFor="prod-rate" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center">
+                  <span className="mr-1 text-xs font-bold text-muted-foreground/80">₹</span> Default Rate (₹)
                 </label>
-                <input
-                  id="prod-rate"
-                  type="number"
-                  placeholder="e.g. 60"
-                  step="any"
-                  min="0"
-                  value={rate}
-                  onChange={(e) => setRate(e.target.value)}
-                  className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  required
-                />
+                <div className="relative rounded-md shadow-sm">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                    <span className="text-sm font-semibold text-muted-foreground/75">₹</span>
+                  </div>
+                  <input
+                    id="prod-rate"
+                    type="number"
+                    placeholder="e.g. 60"
+                    step="any"
+                    min="0"
+                    value={rate}
+                    onChange={(e) => setRate(e.target.value)}
+                    className="block w-full rounded-md border border-input bg-background py-2 pl-6 pr-3 text-sm text-foreground placeholder-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 hover:border-muted-foreground/30"
+                    required
+                  />
+                </div>
               </div>
 
               <button 
@@ -245,7 +255,7 @@ const ProductsPage = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch(e)}
-                  className="w-full rounded-l-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full rounded-l-md border border-input bg-background px-3 py-2 text-sm text-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 hover:border-muted-foreground/30"
                 />
                 <button
                   type="button"
@@ -261,7 +271,7 @@ const ProductsPage = () => {
                 <select
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 hover:border-muted-foreground/30 cursor-pointer"
                 >
                   <option value="all">All Categories</option>
                   <option value="📦">📦 General Box</option>
@@ -322,7 +332,7 @@ const ProductsPage = () => {
                                 value={editIcon} 
                                 onChange={(e) => setEditIcon(e.target.value)} 
                                 maxLength="4"
-                                className="rounded border border-input bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                className="rounded border border-input bg-background px-2 py-1.5 text-sm text-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 hover:border-muted-foreground/30"
                               />
                             </div>
 
@@ -332,7 +342,7 @@ const ProductsPage = () => {
                                 type="text" 
                                 value={editName} 
                                 onChange={(e) => setEditName(e.target.value)} 
-                                className="rounded border border-input bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                className="rounded border border-input bg-background px-2 py-1.5 text-sm text-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 hover:border-muted-foreground/30"
                                 required
                               />
                             </div>
@@ -345,7 +355,7 @@ const ProductsPage = () => {
                               value={editRate} 
                               onChange={(e) => setEditRate(e.target.value)} 
                               step="any"
-                              className="rounded border border-input bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                              className="rounded border border-input bg-background px-2 py-1.5 text-sm text-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 hover:border-muted-foreground/30"
                               required
                             />
                           </div>
